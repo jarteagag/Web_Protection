@@ -1,0 +1,16 @@
+[Service]
+Type=forking
+ExecStartPre=/usr/local/nginx/sbin/nginx -t -c /usr/local/nginx/conf/nginx.conf
+ExecStart=/usr/local/nginx/sbin/nginx -c /usr/local/nginx/conf/nginx.conf
+ExecReload=/usr/local/nginx/sbin/nginx -s reload
+KillStop=/usr/local/nginx/sbin/nginx -s stop
+
+KillMode=process
+Restart=on-failure
+RestartSec=42s
+
+PrivateTmp=true
+LimitNOFILE=200000
+
+[Install]
+WantedBy=multi-user.target
