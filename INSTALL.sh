@@ -83,8 +83,21 @@ mv REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.example REQUEST-900-EXCLUSION-RUL
 mv RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf.example RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf
 
 ###Reiniciar nginx###
-systemctl restart nginx.service
+systemctl nginx.service restart
 
+###Creando IPtables###
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+iptables -A INPUT -p tcp --dport 443 -j ACCEPT
+iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+iptables -A INPUT -p tcp --dport 9200 -j ACCEPT
+iptables -A INPUT -p tcp --dport 5601 -j ACCEPT
+iptables -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
+iptables -P INPUT DROP
+iptables -P OUTPUT ACCEPT
+iptables -P FORWARD DROP
+touch /etc/iptables
+iptables-save > /etc/iptables
 
 ###Remplazar archivos nginx.conf y agregar kibana.example para usarse en script MENU.sh###
 echo "Replacing /usr/local/nginx/conf/nginx.conf with $HOME/nginx_files/nginx.conf"
@@ -97,6 +110,19 @@ cp ~/WebProtection_Installation/nginx_files/kibana.* /usr/local/nginx/conf.d/
 
 ### Crear certificado DH ###
 sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+systemctl nginx.service restart
+
+###Install JAVA 8###
+touch /etc/apt/sources.list.d/java-8-debian.list
+echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list.d/java-8-debian.list
+echo "deb-src http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list.d/java-8-debian.list
+
+#Add GPG Key
+sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EEA14886
+
+#Installing
+echo "Installing java..."
+apt-get update && apt-get install oracle-java8-installer -y
 
 ###Install ELK###
 ###Download GPG KEy and add it###
