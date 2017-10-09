@@ -56,7 +56,7 @@ sleep 60
 
 ####Configurar systemd unit file###
 #/lib/systemd/system/nginx.service
-cp -p /root/WebProtection_Installation/nginx_files/nginx.service /lib/systemd/system/nginx.service
+cp -p /root/Web_Protection/nginx_files/nginx.service /lib/systemd/system/nginx.service
 
 ###Crear archivo modsec_includes.conf###
 touch /usr/local/nginx/conf/modsec_includes.conf
@@ -102,11 +102,11 @@ iptables-save > /etc/iptables
 ###Remplazar archivos nginx.conf y agregar kibana.example para usarse en script MENU.sh###
 echo "Replacing /usr/local/nginx/conf/nginx.conf with $HOME/nginx_files/nginx.conf"
 mv /usr/local/nginx/conf/nginx.conf /usr/local/nginx/conf/nginx.conf.bkp
-cp ~/WebProtection_Installation/nginx_files/nginx.conf /usr/local/nginx/conf/
+cp ~/Web_Protection/nginx_files/nginx.conf /usr/local/nginx/conf/
 echo "....."
 echo "Copying kibana.example to /usr/local/nginx/conf.d/"
 mkdir /usr/local/nginx/conf.d
-cp ~/WebProtection_Installation/nginx_files/kibana.* /usr/local/nginx/conf.d/
+cp ~/Web_Protection/nginx_files/kibana.* /usr/local/nginx/conf.d/
 
 ### Crear certificado DH ###
 sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
@@ -141,20 +141,20 @@ apt-get update && apt-get install logstash elasticsearch kibana -y
 
 #Modificar o copiar todos los archivos que se encuentran en ELK_files
 echo "Copiar archivos de /ELK_Files to /logstash-modsecurity"
-mkdir /root/WebProtection_Installation/logstash-modsecurity
-cp -r /root/WebProtection_Installation/ELK_Files/* /root/WebProtection_Installation/logstash-modsecurity/
+mkdir /root/Web_Protection/logstash-modsecurity
+cp -r /root/Web_Protection/ELK_Files/* /root/Web_Protection/logstash-modsecurity/
 
 ###Ejecutar deploy.sh###
-bash /root/WebProtection_Installation/logstash-modsecurity/deploy.sh
+bash /root/Web_Protection/logstash-modsecurity/deploy.sh
 
 ###Cambiar permiso de log modsecurity###
 setfacl -m u:logstash:r /var/log/modsec_audit.log
 
 ###Copiar archivos ya configurados###
 mv /etc/kibana/kibana.yml /etc/kibana/kibana.bkp
-cp ~/WebProtection_Installation/kibana/kibana.yml /etc/kibana/
-cp -R ~/WebProtection_Installation/logstash/* /etc/logstash/
-cp -R ~/WebProtection_Installation/elasticsearch/* /etc/elasticsearch/
+cp ~/Web_Protection/kibana/kibana.yml /etc/kibana/
+cp -R ~/Web_Protection/logstash/* /etc/logstash/
+cp -R ~/Web_Protection/elasticsearch/* /etc/elasticsearch/
 
 ###Reiniciar servicios###
 echo "Restarting ELK services..."
