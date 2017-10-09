@@ -83,7 +83,7 @@ mv REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.example REQUEST-900-EXCLUSION-RUL
 mv RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf.example RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf
 
 ###Reiniciar nginx###
-systemctl nginx.service restart
+systemctl restart nginx.service
 
 ###Creando IPtables###
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
@@ -110,7 +110,7 @@ cp ~/Web_Protection/nginx_files/kibana.* /usr/local/nginx/conf.d/
 
 ### Crear certificado DH ###
 sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
-systemctl nginx.service restart
+systemctl restart nginx.service
 
 ###Install JAVA 8###
 touch /etc/apt/sources.list.d/java-8-debian.list
