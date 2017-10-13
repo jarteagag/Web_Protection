@@ -1,19 +1,33 @@
 #!/bin/bash
-
-###Actualizar e instalar dependencias###
+echo "Starting Web Protection installation"
+: '
+First we need to update the repositories
+and then install the packages and libraries
+'
 apt update && apt install -y git apache2-utils apt-transport-https build-essential libpcre3 libpcre3-dev libssl-dev libtool autoconf apache2-dev libxml2-dev libcurl4-openssl-dev automake pkgconf  figlet
 
-###Es recomendable utilizar esta version para nginx de modSecurity###
+: '
+By recommendation we need to install
+this ModSecurity version due to this one
+is compatible with Nginx
+'
 cd /usr/src
 git clone -b nginx_refactoring https://github.com/SpiderLabs/ModSecurity.git
 
-###Compilar ModSecurity###
+: '
+Compile modsecurity module
+'
 cd /usr/src/ModSecurity
 ./autogen.sh
 ./configure --enable-standalone-module --disable-mlogc
 make
 
-###Compilar Nginx###
+: '
+We need to download Nginx version 1.12.1 due to this version
+it the lastest compatible with headers to remove headers from responses
+to avoid any information leakage about nginx version, here also compile nginx with
+modsecurity module, ssl and headers.
+'
 cd /usr/src
 wget https://nginx.org/download/nginx-1.12.1.tar.gz
 tar -zxvf nginx-1.12.1.tar.gz && rm -f nginx-1.12.1.tar.gz
@@ -24,12 +38,11 @@ cd /usr/src/nginx-1.12.1/
 make
 make install
 
-###Modificar el usuario default Nginx### <-- Paso no necesario, se reemplaza archivo ngnix.conf
-##sed -i "s/#user  nobody;/user www-data www-data;/" /usr/local/nginx/conf/nginx.conf 
+: '
+Print out the nginx files and their location in the system.
+'
 
-###Los archivos de nginx su localizacion###
-
-echo "Estos son los archivos de Nginx"
+echo "Nginx files and their paths"
 echo -e "\n"
 echo "nginx path prefix: "/usr/local/nginx" "
 echo "nginx binary file: "/usr/local/nginx/sbin/nginx" "
@@ -45,20 +58,29 @@ echo "nginx http fastcgi temporary files: "fastcgi_temp" "
 echo "nginx http uwsgi temporary files: "uwsgi_temp" "
 echo "nginx http scgi temporary files: "scgi_temp" "
 echo -e "\n"
-echo "Espera 10 segundos para continuar..."
+echo "Wait 20 seconds to continue..."
+sleep 20
 
-sleep 10
-
-###Probar la configuracion de nginx###
-echo "Probando configuracion... "
+: '
+We checked nginx configuration to notice if there is some 
+issue within it
+'
+echo "Checking Nginx configuration... "
 /usr/local/nginx/sbin/nginx -t
 sleep 60
 
-####Configurar systemd unit file###
-#/lib/systemd/system/nginx.service
+: '
+Copy the file nginx.service from nginx_files, this file help us
+to create the service in operating system to start, stop and retart 
+the service in an easier way
+'
 cp -p ~/Web_Protection/nginx_files/nginx.service /lib/systemd/system/nginx.service
 
-###Crear archivo modsec_includes.conf###
+
+: '
+Creation of modsec files that contains all ModSecurity configuration
+inclues files and rules needed to begin to protect web server through nginx
+'
 touch /usr/local/nginx/conf/modsec_includes.conf
 cat <<EOF>> /usr/local/nginx/conf/modsec_includes.conf
 include modsecurity.conf
@@ -66,14 +88,22 @@ include owasp-modsecurity-crs/crs-setup.conf
 include owasp-modsecurity-crs/rules/*.conf
 EOF
 
-###Importar archivos de configuracion de modsecurity###
+: '
+Copy needed files from ModSecurity downloaded package 
+to local nginx installation
+'
 cp -p /usr/src/ModSecurity/modsecurity.conf-recommended /usr/local/nginx/conf/modsecurity.conf
 cp -p /usr/src/ModSecurity/unicode.mapping /usr/local/nginx/conf/
 
-### Habilitar motor de boqueo ###
+: '
+Change default mode from Detectio to On, "On" means that ModSecurity begin to block
+requests or attacks acording to the rule set installed
+'
 sed -i "s/SecRuleEngine DetectionOnly/SecRuleEngine On/" /usr/local/nginx/conf/modsecurity.conf
 
-###Agregar Core Set Rules###
+: '
+Add the free modsecurity rules from SpiderLabs github repository
+'
 cd /usr/local/nginx/conf
 git clone https://github.com/SpiderLabs/owasp-modsecurity-crs.git
 cd owasp-modsecurity-crs
@@ -82,10 +112,17 @@ cd rules
 mv REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf.example REQUEST-900-EXCLUSION-RULES-BEFORE-CRS.conf
 mv RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf.example RESPONSE-999-EXCLUSION-RULES-AFTER-CRS.conf
 
-###Reiniciar nginx###
+: '
+To apply all the above configuration we need to restart 
+nginx services.
+'
 systemctl restart nginx.service
 
-###Creando IPtables###
+: '
+We enable and install IPTABLES to improve security in the server
+Port: 9200 is related to elasticsearch (listening just in localhost)
+Port: 5601 is related to Kibana interface (listening just in localhost)
+'
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A INPUT -p tcp --dport 80 -j ACCEPT
 iptables -A INPUT -p tcp --dport 443 -j ACCEPT
@@ -99,7 +136,11 @@ iptables -P FORWARD DROP
 touch /etc/iptables
 iptables-save > /etc/iptables
 
-###Remplazar archivos nginx.conf y agregar kibana.example para usarse en script MENU.sh###
+: '
+Make a copy of the original nginx.conf file and then copy the modified one,
+where we established all the tunned configuration.
+Also we copy all the necessary files to our modified nginx
+'
 echo "Setting up Nginx Configuration"
 mkdir /usr/local/nginx/ssl
 mv /usr/local/nginx/conf/nginx.conf /usr/local/nginx/conf/nginx.conf.bkp
@@ -110,63 +151,96 @@ echo "Copying sites files to /usr/local/nginx/conf.d/"
 mkdir /usr/local/nginx/conf.d
 cp ~/Web_Protection/nginx_files/kibana.* /usr/local/nginx/conf.d/
 
-### Crear certificado DH ###
+: '
+To increase SSL security we need to create  DH certificate and this 
+append within each site configuration files
+'
 sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
 
-### Crear usuario htpasswd ###
+: '
+Create htpasswd file to enable Basic Authentication in Nginx and append 
+user wprotector as default user for it.
+'
 touch /usr/local/nginx/.htpasswd
 echo 'wprotector:$apr1$oSGLXVI9$/xB3u5Xey0xfugyo8P4Y60' >>  /usr/local/nginx/.htpasswd
 
-### Reiniciar servicios nginx ###
+: '
+To apply all the new configuration, nginx is needed to be restarted
+'
 systemctl restart nginx.service
 
 
-###Install JAVA 8###
+: '
+To install ELK stack, first we need to install JAVA
+'
 touch /etc/apt/sources.list.d/java-8-debian.list
 echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list.d/java-8-debian.list
 echo "deb-src http://ppa.launchpad.net/webupd8team/java/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list.d/java-8-debian.list
 
-#Add GPG Key
+: '
+For above repositories we need to add the following key to be able 
+to download and install JAVA
+'
 sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys EEA14886
 
-#Installing
+: '
+Installing JAVA, since is necessary to install ELK stack
+'
 echo "Installing java..."
 apt-get update && apt-get install oracle-java8-installer -y
 
-###Install ELK###
-###Download GPG KEy and add it###
+: '
+From here we install ELK stack, we first to import/download the key to install 
+from repositories
+'
 wget -qO - https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
 
-###Agregar repositorios###
+: '
+Add repository to elastic source
+'
 echo "deb https://artifacts.elastic.co/packages/5.x/apt stable main" | sudo tee -a /etc/apt/sources.list.d/elastic-5.x.list
 
-###Instalar componentes de ELK###
+: '
+We install all ELK stack at once 
+'
 echo "Installing ELK stack..."
 apt-get update && apt-get install logstash elasticsearch kibana -y
 
-###Configure logstash###
-###clonar repositorio###
-###git clone https://github.com/bitsofinfo/logstash-modsecurity.git
-
-#Modificar o copiar todos los archivos que se encuentran en ELK_files
-echo "Configurado logstash"
+: '
+We need to create some directories to copy modified files for logstash, 
+* Logstash is the one that first normilized the incoming information from ModSecurity
+and separete it in fields that elasticsearch can read and organize 
+'
+echo "Logstash is configuring itself"
 mkdir /opt/Web_Protection/
 mkdir /opt/Web_Protection/logstash-modsecurity
 cp -r /root/Web_Protection/ELK_Files/* /opt/Web_Protection/logstash-modsecurity/
 
-###Ejecutar deploy.sh###
+: '
+After copy the modified files we need to run deploy script to install (configure)
+all necessary files to give logstash the ability to process the logs from modsecurity log
+'
 bash /opt/Web_Protection/logstash-modsecurity/deploy.sh
 
-###Cambiar permiso de log modsecurity###
+: '
+At last we need to change permissions to give logstash user permission to read
+ModSecurity log and process it.
+'
 setfacl -m u:logstash:r /var/log/modsec_audit.log
 
-###Copiar archivos ya configurados###
+: '
+Since we have modified all the ELK stack files to suit our needs
+we need to copy those configuration files to their respective paths
+'
 mv /etc/kibana/kibana.yml /etc/kibana/kibana.bkp
 cp ~/Web_Protection/kibana/kibana.yml /etc/kibana/
 cp -R ~/Web_Protection/logstash/* /etc/logstash/
 cp -R ~/Web_Protection/elasticsearch/* /etc/elasticsearch/
 
-###Reiniciar servicios###
+: '
+To apply the configuration changes we need to restart all ELK stack
+components
+'
 echo "Restarting ELK services..."
 service logstash restart
 service elasticsearch restart
