@@ -150,12 +150,20 @@ apt-get update && apt-get install logstash elasticsearch kibana -y
 
 #Modificar o copiar todos los archivos que se encuentran en ELK_files
 echo "Copiar archivos de /ELK_Files to /logstash-modsecurity"
+<<<<<<< HEAD
 mkdir /opt/Web_Protection/
 mkdir /opt/Web_Protection/logstash-modsecurity
 cp -r /root/Web_Protection/ELK_Files/* /opt/Web_Protection/logstash-modsecurity/
 
 ###Ejecutar deploy.sh###
 bash /opt/Web_Protection/logstash-modsecurity/deploy.sh
+=======
+mkdir /home/logstash-modsecurity
+cp -r /root/Web_Protection/ELK_Files/* /home/logstash-modsecurity/
+
+###Ejecutar deploy.sh###
+bash /home/logstash-modsecurity/deploy.sh
+>>>>>>> 7694ccd1a4dc5f41371f2a251dd28c151b08f2d4
 
 ###Cambiar permiso de log modsecurity###
 setfacl -m u:logstash:r /var/log/modsec_audit.log
