@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ###Actualizar e instalar dependencias###
-apt update && apt install -y git apache2-utils apt-transport-https build-essential libpcre3 libpcre3-dev libssl-dev libtool autoconf apache2-dev libxml2-dev libcurl4-openssl-dev automake pkgconf
+apt update && apt install -y git apache2-utils apt-transport-https build-essential libpcre3 libpcre3-dev libssl-dev libtool autoconf apache2-dev libxml2-dev libcurl4-openssl-dev automake pkgconf  figlet
 
 ###Es recomendable utilizar esta version para nginx de modSecurity###
 cd /usr/src
@@ -56,7 +56,7 @@ sleep 60
 
 ####Configurar systemd unit file###
 #/lib/systemd/system/nginx.service
-cp -p /root/Web_Protection/nginx_files/nginx.service /lib/systemd/system/nginx.service
+cp -p ~/Web_Protection/nginx_files/nginx.service /lib/systemd/system/nginx.service
 
 ###Crear archivo modsec_includes.conf###
 touch /usr/local/nginx/conf/modsec_includes.conf
@@ -100,17 +100,26 @@ touch /etc/iptables
 iptables-save > /etc/iptables
 
 ###Remplazar archivos nginx.conf y agregar kibana.example para usarse en script MENU.sh###
-echo "Replacing /usr/local/nginx/conf/nginx.conf with $HOME/nginx_files/nginx.conf"
+echo "Setting up Nginx Configuration"
+mkdir /usr/local/nginx/ssl
 mv /usr/local/nginx/conf/nginx.conf /usr/local/nginx/conf/nginx.conf.bkp
 cp ~/Web_Protection/nginx_files/nginx.conf /usr/local/nginx/conf/
+cp ~/Web_Protection/nginx_files/blockuseragents.rules /usr/local/nginx/
 echo "....."
-echo "Copying kibana.example to /usr/local/nginx/conf.d/"
+echo "Copying sites files to /usr/local/nginx/conf.d/"
 mkdir /usr/local/nginx/conf.d
 cp ~/Web_Protection/nginx_files/kibana.* /usr/local/nginx/conf.d/
 
 ### Crear certificado DH ###
 sudo openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+
+### Crear usuario htpasswd ###
+touch /usr/local/nginx/.htpasswd
+echo 'wprotector:$apr1$oSGLXVI9$/xB3u5Xey0xfugyo8P4Y60' >>  /usr/local/nginx/.htpasswd
+
+### Reiniciar servicios nginx ###
 systemctl restart nginx.service
+
 
 ###Install JAVA 8###
 touch /etc/apt/sources.list.d/java-8-debian.list
@@ -141,11 +150,12 @@ apt-get update && apt-get install logstash elasticsearch kibana -y
 
 #Modificar o copiar todos los archivos que se encuentran en ELK_files
 echo "Copiar archivos de /ELK_Files to /logstash-modsecurity"
-mkdir /root/Web_Protection/logstash-modsecurity
-cp -r /root/Web_Protection/ELK_Files/* /root/Web_Protection/logstash-modsecurity/
+mkdir /opt/Web_Protection/
+mkdir /opt/Web_Protection/logstash-modsecurity
+cp -r /root/Web_Protection/ELK_Files/* /opt/Web_Protection/logstash-modsecurity/
 
 ###Ejecutar deploy.sh###
-bash /root/Web_Protection/logstash-modsecurity/deploy.sh
+bash /opt/Web_Protection/logstash-modsecurity/deploy.sh
 
 ###Cambiar permiso de log modsecurity###
 setfacl -m u:logstash:r /var/log/modsec_audit.log
@@ -161,3 +171,6 @@ echo "Restarting ELK services..."
 service logstash restart
 service elasticsearch restart
 service kibana restart
+
+
+###Instaling Menu Script ###
